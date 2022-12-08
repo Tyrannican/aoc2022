@@ -66,20 +66,6 @@ impl DirectoryContents {
         }
     }
 
-    pub fn print(&self) {
-        println!("Name: {}", self.name);
-        if let Some(parent) = self.get_parent() {
-            println!("Parent: {}", parent.name);
-        } else {
-            println!("Parent: None");
-        }
-
-        let children: Vec<String> = self.children.borrow().keys().map(|k| k.clone()).collect();
-        println!("Children: {:?}", children);
-        println!("Files: {:?}", self.files.borrow().iter().map(|f| f.size).collect::<Vec<i64>>());
-        println!("Size: {}\n", self.size());
-    }
-
     pub fn add_directory(&self, name: &str, parent: WeakDirRef) {
         let new_dir = Directory::new(name);
         self.children.borrow_mut().insert(name.to_string(), new_dir.get_ref());
@@ -106,13 +92,7 @@ impl DirectoryContents {
     }
 
     pub fn size(&self) -> i64 {
+        // Fix this
         0
-    }
-
-    pub fn display(&self) {
-        self.print();
-        for child in self.children.borrow().values() {
-            child.display();
-        }
     }
 }

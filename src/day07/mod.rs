@@ -6,6 +6,16 @@ use crate::utils::*;
 use filesystem::*;
 use std::{rc::Rc, borrow::Borrow, collections::HashMap};
 
+pub fn get_childless(dir: &Rc<DirectoryContents>, no_children: &mut Vec<Rc<DirectoryContents>>) {
+    if dir.children.borrow().len() == 0 {
+        no_children.push(Rc::clone(dir));
+    } else {
+        for child in dir.children.borrow().values() {
+            get_childless(child, no_children);
+        }
+    }
+}
+
 pub struct Solution {
     root: DirRef,
     current_dir: DirRef
@@ -62,7 +72,7 @@ impl Solve for Solution {
     }
 
     fn part1(&mut self) {
-        self.root.display();
+        
     }
 
     fn part2(&mut self) {
