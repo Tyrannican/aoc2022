@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::ops::Deref;
 use std::collections::HashMap;
 
+const LIMIT: i64 = 100_000;
 pub type DirRef = Rc<DirectoryContents>;
 pub type WeakDirRef = Weak<DirectoryContents>;
 pub type Parent = RefCell<WeakDirRef>;
@@ -12,8 +13,8 @@ pub type Files = RefCell<Vec<File>>;
 
 #[derive(Debug, Clone)]
 pub struct File {
-    name: String,
-    size: i64
+    pub name: String,
+    pub size: i64
 }
 
 impl File {
@@ -54,6 +55,7 @@ pub struct DirectoryContents {
     pub files: Files,
     pub parent: Parent,
     pub children: Children,
+    pub size: RefCell<i64>
 }
 
 impl DirectoryContents {
@@ -63,7 +65,12 @@ impl DirectoryContents {
             files: RefCell::new(Vec::new()),
             parent: RefCell::new(Weak::new()),
             children: RefCell::new(HashMap::new()),
+            size: RefCell::new(0)
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.files.borrow().len() == 0 && self.children.borrow().values().len() == 0
     }
 
     pub fn add_directory(&self, name: &str, parent: WeakDirRef) {
@@ -76,6 +83,7 @@ impl DirectoryContents {
 
     pub fn add_file(&self, name: &str, size: i64) {
         self.files.borrow_mut().push(File::new(name, size));
+        *self.size.borrow_mut() += size;
     }
 
     pub fn get_child(&self, name: &str) -> DirRef {
@@ -91,8 +99,14 @@ impl DirectoryContents {
         }
     }
 
-    pub fn size(&self) -> i64 {
-        // Fix this
-        0
+    pub fn total_size(&self) -> i64 {
+        for child in self.children.borrow().values() {
+            let child_size = child.total_size();
+            if *self.size.borrow_mut() + child_size < i64::MAX {
+                *self.size.borrow_mut() += child.total_size();
+            }
+        }
+
+        self.size.borrow().clone()
     }
 }

@@ -4,15 +4,22 @@ mod filesystem;
 
 use crate::utils::*;
 use filesystem::*;
-use std::{rc::Rc, borrow::Borrow, collections::HashMap};
+use std::rc::Rc;
 
-pub fn get_childless(dir: &Rc<DirectoryContents>, no_children: &mut Vec<Rc<DirectoryContents>>) {
-    if dir.children.borrow().len() == 0 {
-        no_children.push(Rc::clone(dir));
+fn visit(dir: &Rc<DirectoryContents>, values: &mut Vec<i64>) {
+    let dir_size = dir.size.borrow();
+    let parent_name = if let Some(parent) = dir.get_parent() {
+        parent.name.clone()
     } else {
-        for child in dir.children.borrow().values() {
-            get_childless(child, no_children);
-        }
+        "None".to_string()
+    };
+    println!("Dir: {} (Parent: {}) Size: {}", dir.name, parent_name, dir_size);
+    if *dir_size <= 100_000 {
+        values.push(*dir_size)
+    }
+
+    for child in dir.children.borrow().values() {
+        visit(child, values);
     }
 }
 
@@ -72,7 +79,9 @@ impl Solve for Solution {
     }
 
     fn part1(&mut self) {
-        
+        let mut total: Vec<i64> = vec![];
+        self.root.total_size();
+        visit(&self.root, &mut total);
     }
 
     fn part2(&mut self) {
