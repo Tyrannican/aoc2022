@@ -6,20 +6,10 @@ use crate::utils::*;
 use filesystem::*;
 use std::rc::Rc;
 
-fn visit(dir: &Rc<DirectoryContents>, values: &mut Vec<i64>) {
-    let dir_size = dir.size.borrow();
-    let parent_name = if let Some(parent) = dir.get_parent() {
-        parent.name.clone()
-    } else {
-        "None".to_string()
-    };
-    println!("Dir: {} (Parent: {}) Size: {}", dir.name, parent_name, dir_size);
-    if *dir_size <= 100_000 {
-        values.push(*dir_size)
-    }
-
+fn all_dirs(dir: &Rc<DirectoryContents>, dir_vec: &mut Vec<Rc<DirectoryContents>>) {
     for child in dir.children.borrow().values() {
-        visit(child, values);
+        dir_vec.push(Rc::clone(child));
+        all_dirs(child, dir_vec);
     }
 }
 
@@ -79,9 +69,14 @@ impl Solve for Solution {
     }
 
     fn part1(&mut self) {
-        let mut total: Vec<i64> = vec![];
-        self.root.total_size();
-        visit(&self.root, &mut total);
+        let mut dirs = vec![];
+        all_dirs(&self.root, &mut dirs);
+        let sum = dirs.iter()
+            .map(|d| d.total_size())
+            .filter(|s| s <= &100_000)
+            .sum::<i64>();
+        
+        println!("Part 1: {}", sum);
     }
 
     fn part2(&mut self) {

@@ -100,13 +100,10 @@ impl DirectoryContents {
     }
 
     pub fn total_size(&self) -> i64 {
-        for child in self.children.borrow().values() {
-            let child_size = child.total_size();
-            if *self.size.borrow_mut() + child_size < i64::MAX {
-                *self.size.borrow_mut() += child.total_size();
-            }
-        }
-
-        self.size.borrow().clone()
+        self.children.borrow()
+            .values()
+            .map(|child| child.total_size())
+            .sum::<i64>()
+            + *self.size.borrow_mut()
     }
 }
