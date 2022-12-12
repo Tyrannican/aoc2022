@@ -80,6 +80,21 @@ impl Solve for Solution {
     }
 
     fn part2(&mut self) {
-        
+        let max_size = 70_000_000;
+        let required_space = 30_000_000;
+        let total_size = self.root.total_size();
+        let free_space = max_size - total_size;
+        let to_free = required_space - free_space;
+
+        let mut dirs = vec![];
+        all_dirs(&self.root, &mut dirs);
+
+        let smallest = dirs.iter()
+            .map(|d| d.total_size())
+            .filter(|s| s >= &to_free)
+            .min()
+            .unwrap();
+
+        println!("Part 2: {}", smallest);
     }
 }
