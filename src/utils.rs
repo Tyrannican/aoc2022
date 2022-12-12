@@ -16,7 +16,7 @@ pub fn read_file(fp: &str) -> String {
 pub fn bootstrap() {
     for day in 1..26 {
         let dir_path = format!("src/day{:0>2}", day);
-        if let Ok(_) = fs::create_dir(&dir_path) {
+        if fs::create_dir(&dir_path).is_ok() {
             let src_file = format!("{}/mod.rs", &dir_path);
             fs::File::create(format!("{}/input.txt", &dir_path)).unwrap();
             fs::File::create(&src_file).unwrap();

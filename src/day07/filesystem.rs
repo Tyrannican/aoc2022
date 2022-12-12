@@ -3,7 +3,6 @@ use std::cell::RefCell;
 use std::ops::Deref;
 use std::collections::HashMap;
 
-const LIMIT: i64 = 100_000;
 pub type DirRef = Rc<DirectoryContents>;
 pub type WeakDirRef = Weak<DirectoryContents>;
 pub type Parent = RefCell<WeakDirRef>;
@@ -69,10 +68,6 @@ impl DirectoryContents {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.files.borrow().len() == 0 && self.children.borrow().values().len() == 0
-    }
-
     pub fn add_directory(&self, name: &str, parent: WeakDirRef) {
         let new_dir = Directory::new(name);
         self.children.borrow_mut().insert(name.to_string(), new_dir.get_ref());
@@ -92,11 +87,7 @@ impl DirectoryContents {
 
     pub fn get_parent(&self) -> Option<DirRef> {
         let weak = self.parent.borrow();
-        if let Some(strong_ref) = weak.upgrade() {
-            Some(strong_ref)
-        } else {
-            None
-        }
+        weak.upgrade()
     }
 
     pub fn total_size(&self) -> i64 {

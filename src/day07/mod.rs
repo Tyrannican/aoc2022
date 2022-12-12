@@ -30,7 +30,7 @@ impl Solution {
     }
 
     fn process_cmd(&mut self, cmd: &str) {
-        let breakdown: Vec<&str> = cmd.split(" ").collect();
+        let breakdown: Vec<&str> = cmd.split(' ').collect();
         let start = breakdown[0];
         let file = breakdown[1];
 
@@ -54,7 +54,7 @@ impl Solve for Solution {
     fn process_input(&mut self, path: &str) {
         let mut raw = read_file(path);
         raw = raw.replace("$ ", "");
-        let mut cmd_list: Vec<&str> = raw.split("\n").collect();
+        let mut cmd_list: Vec<&str> = raw.split('\n').collect();
         let cmds: Vec<&str> = cmd_list.drain(2..).collect();
 
         for cmd in cmds {
