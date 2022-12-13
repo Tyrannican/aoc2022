@@ -1,6 +1,8 @@
 /* Bootstrapped */
 
 use crate::utils::*;
+use std::iter::Rev;
+use std::slice::Iter;
 
 pub struct Solution {
     map: Vec<Vec<u32>>,
@@ -42,6 +44,10 @@ impl Solution {
         let right = &self.map[ridx][cidx + 1..self.width].iter().filter(|t| *t >= &target).map(|t| *t).collect::<Vec<u32>>();
         if right.len() == 0 { self.visible += 1; return; }
     }
+
+    fn scenic_score(&self, ridx: usize, cidx: usize) -> u32 {
+        0
+    }
 }
 
 impl Solve for Solution {
@@ -66,6 +72,14 @@ impl Solve for Solution {
     }
 
     fn part2(&mut self) {
-        
+        let mut max = 0;
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let score = self.scenic_score(row, col);
+                if score > max { max = score; }
+            }
+        }
+
+        println!("Part 2: {}", max);
     }
 }
