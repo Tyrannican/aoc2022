@@ -24,25 +24,45 @@ impl Solution {
     fn is_edge(&self, ridx: usize, cidx: usize) -> bool {
         ridx == 0 || ridx == self.height - 1 || cidx == 0 || cidx == self.width - 1
     }
+
+    fn is_visible(&mut self, ridx: usize, cidx: usize) {
+        if self.is_edge(ridx, cidx) { self.visible += 1; return; }
+
+        let target = self.map[ridx][cidx];
+
+        let up = &self.map[0..ridx].iter().map(|m| m[cidx]).filter(|t| t >= &target).collect::<Vec<u32>>();
+        if up.len() == 0 { self.visible += 1; return; }
+
+        let down = &self.map[ridx + 1..self.height].iter().map(|m| m[cidx]).filter(|t| t >= &target).collect::<Vec<u32>>();
+        if down.len() == 0 { self.visible += 1; return; }
+
+        let left = &self.map[ridx][0..cidx].iter().filter(|t| *t >= &target).map(|t| *t).collect::<Vec<u32>>();
+        if left.len() == 0 { self.visible += 1; return; }
+
+        let right = &self.map[ridx][cidx + 1..self.width].iter().filter(|t| *t >= &target).map(|t| *t).collect::<Vec<u32>>();
+        if right.len() == 0 { self.visible += 1; return; }
+    }
 }
 
 impl Solve for Solution {
     fn process_input(&mut self, path: &str) {
         let raw = read_file(path);
         for line in raw.split('\n') {
-            let inner = line.chars()
-                .map(|c| c.to_digit(10).unwrap())
-                .collect::<Vec<u32>>();
-
+            let inner = line.chars().map(|c| c.to_digit(10).unwrap()).collect::<Vec<u32>>();
             self.map.push(inner);
         }
-
         self.height = self.map.len();
         self.width = self.map[0].len();
     }
 
     fn part1(&mut self) {
+        for row in 0..self.height {
+            for col in 0..self.width {
+                self.is_visible(row, col);
+            }
+        }
 
+        println!("Part 1: {}", self.visible);
     }
 
     fn part2(&mut self) {
