@@ -1,8 +1,6 @@
 /* Bootstrapped */
 
 use crate::utils::*;
-use std::iter::Rev;
-use std::slice::Iter;
 
 pub struct Solution {
     map: Vec<Vec<u32>>,
@@ -46,7 +44,40 @@ impl Solution {
     }
 
     fn scenic_score(&self, ridx: usize, cidx: usize) -> u32 {
-        0
+        if self.is_edge(ridx, cidx) { return 0 }
+
+        let target = self.map[ridx][cidx];
+
+        // This is totally refactorable but I cant be fucked so meh
+        let mut left = 0;
+        let left_iter = self.map[ridx][0..cidx].iter().rev();
+        for item in left_iter {
+            left += 1;
+            if item >= &target { break; }
+        }
+
+        let mut right = 0;
+        let right_iter = self.map[ridx][cidx + 1..self.width].iter();
+        for item in right_iter {
+            right += 1;
+            if item >= &target { break; }
+        }
+
+        let mut up = 0;
+        let up_iter = self.map[0..ridx].iter().rev();
+        for item in up_iter {
+            up += 1;
+            if item[cidx] >= target { break; }
+        }
+
+        let mut down = 0;
+        let down_iter = self.map[ridx + 1..self.height].iter();
+        for item in down_iter {
+            down += 1;
+            if item[cidx] >= target { break; }
+        }
+
+        up * down * left * right
     }
 }
 
