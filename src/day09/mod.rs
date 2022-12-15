@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq)]
-enum Direction {
+pub enum Direction {
     Up,
     Down,
     Left,
@@ -13,21 +13,10 @@ enum Direction {
     Unknown
 }
 
-const CardinalPoints: [(i32, i32); 8] = [
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-    (-1, 0),
-    (1, 0),
-    (-1, -1),
-    (0, -1),
-    (1, -1)
-];
-
 type Instruction = (Direction, i32);
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-struct Cell {
+pub struct Cell {
     x: i32,
     y: i32
 }
@@ -59,86 +48,48 @@ impl Solution {
 
     fn clear(&mut self) {
         self.nodes.borrow_mut().clear();
+        self.visited.clear();
     }
 
-    fn is_touching(&self, head: &mut Cell, tail: &mut Cell) -> bool {
-        let mut touching = false;
-        for coord in CardinalPoints.iter() {
-            let (x, y) = coord;
-            if tail.x + x == head.x && tail.y + y == head.y {
-                touching = true;
-                break;
-            }
+    pub fn calculate_position(&self, head: &mut Cell, tail: &mut Cell) -> Option<Cell> {
+        let dx = tail.x - head.x;
+        let dy = tail.y - head.y;
+
+        if (dx == 2 || dx == -2) && (dy == 2 || dy == -2) {
+            return Some(Cell { x: head.x + dx.clamp(-1, 1), y: head.y + dy.clamp(-1, 1) })
+        } else if dx == 2 || dx == -2 {
+            return Some(Cell { x: head.x + dx.clamp(-1, 1), y: head.y })
+        } else if dy == 2 || dy == -2 {
+            return Some(Cell { x: head.x, y: head.y + dy.clamp(-1, 1) })
         }
 
-        touching
+        None
     }
 
-    fn update_corner(&self, head: &mut Cell, tail: &mut Cell) {
-        // Top right
-        if (head.x == tail.x + 1 && head.y == tail.y + 2)
-        || (head.x == tail.x + 2 && head.y == tail.y + 1)
-        {
-            tail.x += 1;
-            tail.y += 1;
-        }
-
-        // Top Left
-        if (head.x == tail.x - 1 && head.y == tail.y + 2)
-        || (head.x == tail.x - 2 && head.y == tail.y + 1)
-        {
-            tail.x -= 1;
-            tail.y += 1;
-        }
-
-        // Bottom Left
-        if (head.x == tail.x - 1 && head.y == tail.y - 2)
-        || (head.x == tail.x - 2 && head.y == tail.y - 1)
-        {
-            tail.x -= 1;
-            tail.y -= 1;
-        }
-
-        // Bottom Right
-        if (head.x == tail.x + 1 && head.y == tail.y - 2)
-        || (head.x == tail.x + 2 && head.y == tail.y - 1)
-        {
-            tail.x += 1;
-            tail.y -= 1;
-        }
-    }
-
-    fn update_cardinal(&self, head: &mut Cell, tail: &mut Cell) {
-        if head.x == tail.x + 2 {
-            tail.x += 1;
-        }
-        else if head.x == tail.x - 2 {
-            tail.x -= 1;
-        }
-        else if head.y == tail.y + 2 {
-            tail.y += 1;
-        }
-        else if head.y == tail.y - 2 {
-            tail.y -= 1;
-        }
-    }
-
-    pub fn update_nodes(&self) -> Cell {
-        println!("Iteration");
+    pub fn update_nodes(&self, direction: &Direction) -> Cell {
         let mut nodes = self.nodes.borrow_mut();
         let mut iter = nodes.iter_mut();
-
         let mut head = iter.next().unwrap();
+
+        match direction {
+            Direction::Up => head.y += 1,
+            Direction::Down => head.y -= 1,
+            Direction::Left => head.x -= 1,
+            Direction::Right => head.x += 1,
+            _ => {}
+        }
+
         for tail in iter {
-            if !self.is_touching(head, tail) {
-                self.update_corner(head, tail);
-                self.update_cardinal(head, tail);
+            if let Some(knot) = self.calculate_position(head, tail) {
+                tail.x = knot.x;
+                tail.y = knot.y;
             }
 
             head = tail;
         }
 
         Cell { x: head.x, y: head.y }
+
     }
 }
 
@@ -168,24 +119,28 @@ impl Solve for Solution {
         for item in instructions.drain(..) {
             let (direction, moves) = item;
 
-            let mut head = &mut self.nodes.borrow_mut()[0];
             for _ in 0..moves {
-                match direction {
-                    Direction::Up => head.y += 1,
-                    Direction::Down => head.y -= 1,
-                    Direction::Left => head.x -= 1,
-                    Direction::Right => head.x += 1,
-                    _ => {}
-                }
-                let node = self.update_nodes();
+                let node = self.update_nodes(&direction);
                 self.visited.insert(node);
             }
         }
-        println!("Part 1: {:?}", self.nodes.borrow()[0]);
+        println!("Part 1: {}", self.visited.len());
     }
 
     fn part2(&mut self) {
         self.clear();
         self.init_nodes(10);
+
+        let mut instructions = self.instructions.clone();
+
+        for item in instructions.drain(..) {
+            let (direction, moves) = item;
+
+            for _ in 0..moves {
+                let node = self.update_nodes(&direction);
+                self.visited.insert(node);
+            }
+        }
+        println!("Part 2: {:?}", self.visited.len());
     }
 }
