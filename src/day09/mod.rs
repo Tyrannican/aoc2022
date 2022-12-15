@@ -12,6 +12,17 @@ enum Direction {
     Unknown
 }
 
+const CardinalPoints: [(i32, i32); 8] = [
+    (-1, 1),
+    (0, 1),
+    (1, 1),
+    (-1, 0),
+    (1, 0),
+    (-1, -1),
+    (0, -1),
+    (1, -1)
+];
+
 type Instruction = (Direction, i32);
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -41,8 +52,74 @@ impl Solution {
         sol
     }
 
+    fn is_touching(&self) -> bool {
+        let mut touching = false;
+        for coord in CardinalPoints.iter() {
+            let (x, y) = coord;
+            if self.tail.x + x == self.head.x && self.tail.y + y == self.head.y {
+                touching = true;
+                break;
+            }
+        }
+
+        touching
+    }
+
+    fn update_corner(&mut self) {
+        // Top right
+        if (self.head.x == self.tail.x + 1 && self.head.y == self.tail.y + 2)
+        || (self.head.x == self.tail.x + 2 && self.head.y == self.tail.y + 1)
+        {
+            self.tail.x += 1;
+            self.tail.y += 1;
+        }
+
+        // Top Left
+        if (self.head.x == self.tail.x - 1 && self.head.y == self.tail.y + 2)
+        || (self.head.x == self.tail.x - 2 && self.head.y == self.tail.y + 1)
+        {
+            self.tail.x -= 1;
+            self.tail.y += 1;
+        }
+
+        // Bottom Left
+        if (self.head.x == self.tail.x - 1 && self.head.y == self.tail.y - 2)
+        || (self.head.x == self.tail.x - 2 && self.head.y == self.tail.y - 1)
+        {
+            self.tail.x -= 1;
+            self.tail.y -= 1;
+        }
+
+        // Bottom Right
+        if (self.head.x == self.tail.x + 1 && self.head.y == self.tail.y - 2)
+        || (self.head.x == self.tail.x + 2 && self.head.y == self.tail.y - 1)
+        {
+            self.tail.x += 1;
+            self.tail.y -= 1;
+        }
+    }
+
+    fn update_cadinal(&mut self) {
+        if self.head.x == self.tail.x + 2 {
+            self.tail.x += 1;
+        }
+        else if self.head.x == self.tail.x - 2 {
+            self.tail.x -= 1;
+        }
+        else if self.head.y == self.tail.y + 2 {
+            self.tail.y += 1;
+        }
+        else if self.head.y == self.tail.y - 2 {
+            self.tail.y -= 1;
+        }
+    }
+
     pub fn update_tail(&mut self) {
-        // TODO: Move the tail in accordance with the tail
+        if !self.is_touching() {
+            self.update_corner();
+            self.update_cadinal();
+        }
+
         self.visited.insert(Cell { x: self.tail.x, y: self.tail.y });
     }
 }
@@ -72,7 +149,6 @@ impl Solve for Solution {
         for item in instructions.drain(..) {
             let (direction, moves) = item;
 
-            println!("Instruction: ({:?}, {}) -- Head: {:?}", direction, moves, self.head);
             for _ in 0..moves {
                 match direction {
                     Direction::Up => self.head.y += 1,
@@ -84,7 +160,7 @@ impl Solve for Solution {
                 self.update_tail();
             }
         }
-        println!("Length: {:?}", self.visited.len());
+        println!("Part 1: {}", self.visited.len());
     }
 
     fn part2(&mut self) {
