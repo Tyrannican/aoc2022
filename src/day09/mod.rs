@@ -1,6 +1,7 @@
 /* Bootstrapped */
 
 use crate::utils::*;
+use std::cell::RefCell;
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,8 +34,7 @@ struct Cell {
 
 pub struct Solution {
     instructions: Vec<Instruction>,
-    head: Cell,
-    tail: Cell,
+    nodes: RefCell<Vec<Cell>>,
     visited: HashSet<Cell>
 }
 
@@ -44,19 +44,28 @@ impl Solution {
 
         let mut sol = Self {
             instructions: vec![],
-            head: Cell { x: 0, y: 0 },
-            tail: Cell{ x: 0, y: 0 },
+            nodes: RefCell::new(vec![]),
             visited: HashSet::from_iter(initial_state)
         };
         sol.process_input("day09/input.txt");
         sol
     }
 
-    fn is_touching(&self) -> bool {
+    fn init_nodes(&mut self, total: i32) {
+        for _ in 0..total {
+            self.nodes.borrow_mut().push(Cell { x: 0, y: 0 });
+        }
+    }
+
+    fn clear(&mut self) {
+        self.nodes.borrow_mut().clear();
+    }
+
+    fn is_touching(&self, head: &mut Cell, tail: &mut Cell) -> bool {
         let mut touching = false;
         for coord in CardinalPoints.iter() {
             let (x, y) = coord;
-            if self.tail.x + x == self.head.x && self.tail.y + y == self.head.y {
+            if tail.x + x == head.x && tail.y + y == head.y {
                 touching = true;
                 break;
             }
@@ -65,62 +74,71 @@ impl Solution {
         touching
     }
 
-    fn update_corner(&mut self) {
+    fn update_corner(&self, head: &mut Cell, tail: &mut Cell) {
         // Top right
-        if (self.head.x == self.tail.x + 1 && self.head.y == self.tail.y + 2)
-        || (self.head.x == self.tail.x + 2 && self.head.y == self.tail.y + 1)
+        if (head.x == tail.x + 1 && head.y == tail.y + 2)
+        || (head.x == tail.x + 2 && head.y == tail.y + 1)
         {
-            self.tail.x += 1;
-            self.tail.y += 1;
+            tail.x += 1;
+            tail.y += 1;
         }
 
         // Top Left
-        if (self.head.x == self.tail.x - 1 && self.head.y == self.tail.y + 2)
-        || (self.head.x == self.tail.x - 2 && self.head.y == self.tail.y + 1)
+        if (head.x == tail.x - 1 && head.y == tail.y + 2)
+        || (head.x == tail.x - 2 && head.y == tail.y + 1)
         {
-            self.tail.x -= 1;
-            self.tail.y += 1;
+            tail.x -= 1;
+            tail.y += 1;
         }
 
         // Bottom Left
-        if (self.head.x == self.tail.x - 1 && self.head.y == self.tail.y - 2)
-        || (self.head.x == self.tail.x - 2 && self.head.y == self.tail.y - 1)
+        if (head.x == tail.x - 1 && head.y == tail.y - 2)
+        || (head.x == tail.x - 2 && head.y == tail.y - 1)
         {
-            self.tail.x -= 1;
-            self.tail.y -= 1;
+            tail.x -= 1;
+            tail.y -= 1;
         }
 
         // Bottom Right
-        if (self.head.x == self.tail.x + 1 && self.head.y == self.tail.y - 2)
-        || (self.head.x == self.tail.x + 2 && self.head.y == self.tail.y - 1)
+        if (head.x == tail.x + 1 && head.y == tail.y - 2)
+        || (head.x == tail.x + 2 && head.y == tail.y - 1)
         {
-            self.tail.x += 1;
-            self.tail.y -= 1;
+            tail.x += 1;
+            tail.y -= 1;
         }
     }
 
-    fn update_cadinal(&mut self) {
-        if self.head.x == self.tail.x + 2 {
-            self.tail.x += 1;
+    fn update_cardinal(&self, head: &mut Cell, tail: &mut Cell) {
+        if head.x == tail.x + 2 {
+            tail.x += 1;
         }
-        else if self.head.x == self.tail.x - 2 {
-            self.tail.x -= 1;
+        else if head.x == tail.x - 2 {
+            tail.x -= 1;
         }
-        else if self.head.y == self.tail.y + 2 {
-            self.tail.y += 1;
+        else if head.y == tail.y + 2 {
+            tail.y += 1;
         }
-        else if self.head.y == self.tail.y - 2 {
-            self.tail.y -= 1;
+        else if head.y == tail.y - 2 {
+            tail.y -= 1;
         }
     }
 
-    pub fn update_tail(&mut self) {
-        if !self.is_touching() {
-            self.update_corner();
-            self.update_cadinal();
+    pub fn update_nodes(&self) -> Cell {
+        println!("Iteration");
+        let mut nodes = self.nodes.borrow_mut();
+        let mut iter = nodes.iter_mut();
+
+        let mut head = iter.next().unwrap();
+        for tail in iter {
+            if !self.is_touching(head, tail) {
+                self.update_corner(head, tail);
+                self.update_cardinal(head, tail);
+            }
+
+            head = tail;
         }
 
-        self.visited.insert(Cell { x: self.tail.x, y: self.tail.y });
+        Cell { x: head.x, y: head.y }
     }
 }
 
@@ -144,26 +162,30 @@ impl Solve for Solution {
     }
 
     fn part1(&mut self) {
+        self.init_nodes(2);
         let mut instructions = self.instructions.clone();
 
         for item in instructions.drain(..) {
             let (direction, moves) = item;
 
+            let mut head = &mut self.nodes.borrow_mut()[0];
             for _ in 0..moves {
                 match direction {
-                    Direction::Up => self.head.y += 1,
-                    Direction::Down => self.head.y -= 1,
-                    Direction::Left => self.head.x -= 1,
-                    Direction::Right => self.head.x += 1,
+                    Direction::Up => head.y += 1,
+                    Direction::Down => head.y -= 1,
+                    Direction::Left => head.x -= 1,
+                    Direction::Right => head.x += 1,
                     _ => {}
                 }
-                self.update_tail();
+                let node = self.update_nodes();
+                self.visited.insert(node);
             }
         }
-        println!("Part 1: {}", self.visited.len());
+        println!("Part 1: {:?}", self.nodes.borrow()[0]);
     }
 
     fn part2(&mut self) {
-        
+        self.clear();
+        self.init_nodes(10);
     }
 }
