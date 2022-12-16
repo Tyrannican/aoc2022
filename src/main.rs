@@ -1,10 +1,10 @@
 mod utils;
-mod day10;
+mod day11;
 
 use utils::Solve;
 
 fn main() {
-    let mut sol = day10::Solution::new();
+    let mut sol = day11::Solution::new();
     sol.part1();
     sol.part2();
 }
