@@ -82,14 +82,14 @@ fn create_monkey(mut monkey_data: Vec<&str>) -> Monkey {
 }
 
 pub struct Solution {
-    monkeys: HashMap<usize, Monkey>,
+    monkeys: Vec<Monkey>,
     inspection: Vec<i64>
 }
 
 impl Solution {
     pub fn new() -> Self {
         let mut sol = Self {
-            monkeys: HashMap::new(),
+            monkeys: vec![],
             inspection: vec![]
         };
         sol.process_input("day11/input.txt");
@@ -97,70 +97,57 @@ impl Solution {
     }
 
     pub fn display(&self) {
-        for (idx, monkey) in self.monkeys.iter() {
+        for (idx, monkey) in self.monkeys.iter().enumerate() {
             println!("Monkey {}: {:?}", idx, monkey.items);
         }
 
         println!("Inspections: {:?}", self.inspection);
     }
 
-    pub fn round(&mut self, calm: bool, modulus: i64) {
-        let length = self.monkeys.len();
-
-        for idx in 0..length {
+    pub fn round(&mut self, monkeys: &mut Vec<Monkey>, calm: bool, modulus: i64) {
+        for idx in 0..monkeys.len() {
             // println!("Monkey: {}", idx);
-            let items = self.monkeys
-                .get_mut(&idx)
-                .unwrap()
-                .items.drain(..)
+            let monkey = &mut monkeys[idx];
+            // println!("Items: {:?}", monkey.items);
+            let items = monkey.items
+                .drain(..)
+                .map(|mut w| {
+                    self.inspection[idx] += 1;
+                    match monkey.operation {
+                        Arithmetic::Add(val) => {
+                            if val == -1 { w += w; w }
+                            else { w += val; w }
+
+                        }
+                        Arithmetic::Mul(val) => {
+                            if val == -1 { w *= w; w }
+                            else { w *= val; w }
+                        }
+                    }
+                })
+                .map(|mut w| {
+                    if calm { w /= 3; w }
+                    else { w = w % modulus; w }
+                })
                 .collect::<Vec<i64>>();
+            // println!("Items after: {:?} (Old: {:?})", items, monkey.items);
             
-            let operation = self.monkeys.get(&idx).unwrap().operation.clone();
-            let condition = self.monkeys.get(&idx).unwrap().condition;
-            let true_target = self.monkeys.get(&idx).unwrap().true_target;
-            let false_target = self.monkeys.get(&idx).unwrap().false_target;
+            let condition = monkey.condition;
+            let true_target = monkey.true_target;
+            let false_target = monkey.false_target;
 
-            for mut worry in items {
-                self.inspection[idx] += 1;
-                // println!("Item: {}", worry);
-                match operation {
-                    Arithmetic::Add(val) => {
-                        if val == -1 {
-                            worry += worry;
-                        } else {
-                            worry += val;
-                        }
-                    }
-                    Arithmetic::Mul(val) => {
-                        if val == -1 {
-                            worry *= worry;
-                        } else {
-                            worry *= val
-                        }
-                    }
-                }
-                // println!("Worry after operation: {}", worry);
-
-                if calm {
-                    worry /= 3;
+            for item in items {
+                let target = if item % condition == 0 {
+                    // println!("Divisible by {}, passing to Monkey: {}", condition, true_target);
+                    true_target
                 } else {
-                    worry = worry % modulus;
-                }
+                    // println!("Not divisible by {}, passing to Monkey: {}", condition, false_target);
+                    false_target
+                };
 
-                // println!("Worry after calm down: {}", worry);
-
-                // Toss to monkey
-                if worry % condition == 0 {
-                    // println!("Divisible by {}: sending to monkey {}", condition, true_target);
-                    let target = self.monkeys.get_mut(&(true_target as usize)).unwrap();
-                    target.items.push(worry);
-                } else {
-                    // println!("Not divisible by {}: sending to monkey {}", condition, false_target);
-                    let target = self.monkeys.get_mut(&(false_target as usize)).unwrap();
-                    target.items.push(worry);
-                }
+                monkeys[target as usize].items.push(item);
             }
-            // println!();
+            println!();
         }
     }
 }
@@ -173,28 +160,30 @@ impl Solve for Solution {
                 .map(|c| c.trim())
                 .collect::<Vec<&str>>();
 
-            self.monkeys.insert(idx, create_monkey(monkey));
+            self.monkeys.push(create_monkey(monkey));
+            self.inspection.push(0);
         }
 
-        for _ in 0..self.monkeys.len() { self.inspection.push(0); }
     }
 
     fn part1(&mut self) {
+        let mut monkeys = self.monkeys.clone();
         for _ in 0..20 {
-            self.round(true, 0);
+            self.round(&mut monkeys, true, 0);
         }
         self.inspection.sort_by(|a, b| b.cmp(a));
         println!("Part 1: {}", self.inspection[0] * self.inspection[1]);
     }
 
     fn part2(&mut self) {
-        let modulus: i64 = self.monkeys.values()
-            .map(|m| m.condition)
-            .product();
+        // let mut monkeys = self.monkeys.clone();
+        // let modulus: i64 = self.monkeys.iter()
+        //     .map(|m| m.condition)
+        //     .product();
 
-        for _ in 0..10000 {
-            self.round(false, modulus);
-        }
-        println!("Inspections: {:?}", self.inspection);
+        // for _ in 0..10000 {
+        //     self.round(&mut monkeys, false, modulus);
+        // }
+        // println!("Inspections: {:?}", self.inspection);
     }
 }
