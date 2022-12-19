@@ -1,7 +1,6 @@
 /* Bootstrapped */
 
 use crate::utils::*;
-use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Arithmetic {
@@ -96,19 +95,14 @@ impl Solution {
         sol
     }
 
-    pub fn display(&self) {
-        for (idx, monkey) in self.monkeys.iter().enumerate() {
-            println!("Monkey {}: {:?}", idx, monkey.items);
-        }
-
-        println!("Inspections: {:?}", self.inspection);
+    pub fn clear(&mut self) {
+        self.inspection.clear();
+        for _ in 0..self.monkeys.len() { self.inspection.push(0); }
     }
 
     pub fn round(&mut self, monkeys: &mut Vec<Monkey>, calm: bool, modulus: i64) {
         for idx in 0..monkeys.len() {
-            // println!("Monkey: {}", idx);
             let monkey = &mut monkeys[idx];
-            // println!("Items: {:?}", monkey.items);
             let items = monkey.items
                 .drain(..)
                 .map(|mut w| {
@@ -127,10 +121,9 @@ impl Solution {
                 })
                 .map(|mut w| {
                     if calm { w /= 3; w }
-                    else { w = w % modulus; w }
+                    else { w %= modulus; w }
                 })
                 .collect::<Vec<i64>>();
-            // println!("Items after: {:?} (Old: {:?})", items, monkey.items);
             
             let condition = monkey.condition;
             let true_target = monkey.true_target;
@@ -138,16 +131,13 @@ impl Solution {
 
             for item in items {
                 let target = if item % condition == 0 {
-                    // println!("Divisible by {}, passing to Monkey: {}", condition, true_target);
                     true_target
                 } else {
-                    // println!("Not divisible by {}, passing to Monkey: {}", condition, false_target);
                     false_target
                 };
 
                 monkeys[target as usize].items.push(item);
             }
-            println!();
         }
     }
 }
@@ -155,8 +145,8 @@ impl Solution {
 impl Solve for Solution {
     fn process_input(&mut self, path: &str) {
         let raw = read_file(path);
-        for (idx, data) in raw.split("\n\n").enumerate() {
-            let monkey = data.split("\n")
+        for data in raw.split("\n\n") {
+            let monkey = data.split('\n')
                 .map(|c| c.trim())
                 .collect::<Vec<&str>>();
 
@@ -176,14 +166,16 @@ impl Solve for Solution {
     }
 
     fn part2(&mut self) {
-        // let mut monkeys = self.monkeys.clone();
-        // let modulus: i64 = self.monkeys.iter()
-        //     .map(|m| m.condition)
-        //     .product();
+        self.clear();
+        let mut monkeys = self.monkeys.clone();
+        let modulus: i64 = self.monkeys.iter()
+            .map(|m| m.condition)
+            .product();
 
-        // for _ in 0..10000 {
-        //     self.round(&mut monkeys, false, modulus);
-        // }
-        // println!("Inspections: {:?}", self.inspection);
+        for _ in 0..10_000 {
+            self.round(&mut monkeys, false, modulus);
+        }
+        self.inspection.sort_by(|a, b| b.cmp(a));
+        println!("Part 2: {}", self.inspection[0] * self.inspection[1]);
     }
 }
