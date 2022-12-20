@@ -11,22 +11,43 @@ const CARDINAL: [(i32, i32); 4] = [
     (0, 1)
 ];
 
-#[derive(Debug, Clone)]
+type Peak = Rc<RefCell<Node>>;
+type Coord = (usize, usize);
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Node {
     elev: u8,
-    neighbors: Vec<Rc<RefCell<Node>>>
+    x: i32,
+    y: i32,
+    neighbors: Vec<Peak>
 }
 
 impl Node {
-    pub fn new(elev: u8) -> Self {
-        Self { elev, neighbors: vec![] }
+    pub fn new(elev: u8, x: i32, y: i32) -> Self {
+        Self {
+            elev,
+            x, y,
+            neighbors: vec![]
+        }
+    }
+}
+
+impl std::fmt::Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut neighbors = vec![];
+        for n in &self.neighbors {
+            neighbors.push(char::from_u32(n.borrow().elev as u32).unwrap());
+        }
+
+        let s = format!("Node {{ X: {}, Y: {}, elev: {}, neighbors: {:?} }}", self.x, self.y, self.elev, neighbors);
+        write!(f, "{}", s)
     }
 }
 
 pub struct Solution {
-    start: Option<Rc<RefCell<Node>>>,
-    target: Option<Rc<RefCell<Node>>>,
-    nodes: Vec<Vec<Rc<RefCell<Node>>>>,
+    start: Option<Peak>,
+    target: Option<Peak>,
+    nodes: Vec<Vec<Peak>>,
     width: i32,
     height: i32
 }
@@ -45,59 +66,7 @@ impl Solution {
         sol
     }
 
-    // Shameless C+P of a Djikstra
-    // fn dijkstra(&self, start: &Node<T>, end: &Node<T>) -> Option<Vec<&Node<T>>> {
-    //     // Set up the priority queue and distances map
-    //     let mut heap = BinaryHeap::new();
-    //     let mut distances = HashMap::new();
-
-    //     // Initialize the distances of all nodes to infinity, except for the start node
-    //     for node in &self.nodes {
-    //         if node == start {
-    //             distances.insert(node, 0);
-    //         } else {
-    //             distances.insert(node, std::isize::MAX);
-    //         }
-    //     }
-
-    //     // Insert the start node into the priority queue
-    //     heap.push((0, start));
-
-    //     // Set up the predecessors map to store the path
-    //     let mut predecessors = HashMap::new();
-
-    //     // Perform the search
-    //     while let Some((_, node)) = heap.pop() {
-    //         // Check if we have reached the end node
-    //         if node == end {
-    //             // Construct the path by following the predecessors
-    //             let mut path = Vec::new();
-    //             let mut current_node = end;
-    //             while current_node != start {
-    //                 path.push(current_node);
-    //                 current_node = predecessors[current_node];
-    //             }
-    //             path.push(start);
-    //             path.reverse();
-    //             return Some(path);
-    //         }
-
-    //         // Update the distances of the neighbors
-    //         for neighbor in &node.neighbors {
-    //             let distance = distances[node] + 1; // Assume a distance of 1 between all nodes
-    //             if distance < distances[neighbor] {
-    //                 distances.insert(neighbor, distance);
-    //                 predecessors.insert(neighbor, node);
-    //                 heap.push((distance, neighbor));
-    //             }
-    //         }
-    //     }
-
-    //     // Return None if the end node was not reached
-    //     None
-    // }
-
-    fn add_node(&mut self, node: Node, inner: &mut Vec<Rc<RefCell<Node>>>, sp: char) {
+    fn add_node(&mut self, node: Node, inner: &mut Vec<Peak>, sp: char) {
         let rc = Rc::new(RefCell::new(node));
         match sp {
             'S' => self.start = Some(Rc::clone(&rc)),
@@ -109,15 +78,14 @@ impl Solution {
     }
 
     fn update_neighbors(&mut self) {
-        // TODO: Fix this
         for ridx in 0..self.height {
             for cidx in 0..self.width {
                 let mut node = self.nodes[ridx as usize][cidx as usize].borrow_mut();
                 for (x, y) in CARDINAL {
-                    let dx = cidx + x;
-                    let dy = ridx + y;
-                    if dx < 0 || dx >= self.width || dy < 0 || dy >= self.height { continue; }
-                    let check = &self.nodes[dy as usize][dx as usize];
+                    let dx = ridx + x;
+                    let dy = cidx + y;
+                    if dx < 0 || dx >= self.height || dy < 0 || dy >= self.width { continue; }
+                    let check = &self.nodes[dx as usize][dy as usize];
                     let check_borrow = check.borrow();
                     if check_borrow.elev == node.elev + 1 || check_borrow.elev <= node.elev {
                         node.neighbors.push(Rc::clone(check));
@@ -126,19 +94,32 @@ impl Solution {
             }
         }
     }
+
+    fn display(&self) {
+        for ridx in 0..self.height {
+            for cidx in 0..self.width {
+                let node = self.nodes[ridx as usize][cidx as usize].borrow();
+                println!("{}", node);
+            }
+        }
+    }
 }
 
 impl Solve for Solution {
     fn process_input(&mut self, path: &str) {
         let raw = read_file(path);
-        for line in raw.split('\n') {
+        for (x, line) in raw.split('\n').enumerate() {
             let mut inner = vec![];
-            for ch in line.chars() {
+            for (y, ch) in line.chars().enumerate() {
                 if ch == 'S' || ch == 'E' {
-                    let node = Node::new(0);
+                    let node = if ch == 'S' {
+                        Node::new('a' as u8, x as i32 ,y as i32)
+                    } else {
+                        Node::new('z' as u8, x as i32, y as i32)
+                    };
                     self.add_node(node, &mut inner, ch);
                 } else {
-                    let node = Node::new(ch as u8);
+                    let node = Node::new(ch as u8, x as i32, y as i32);
                     self.add_node(node, &mut inner, '_');
                 }
             }
@@ -150,7 +131,7 @@ impl Solve for Solution {
     }
 
     fn part1(&mut self) {
-        println!("Nodes: {:?}", self.nodes[0]);
+        println!("{}", self.target.as_ref().unwrap().borrow());
     }
 
     fn part2(&mut self) {
