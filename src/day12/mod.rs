@@ -1,27 +1,44 @@
 /* Bootstrapped */
 
 use crate::utils::*;
+use std::rc::Rc;
+use std::cell::RefCell;
+
+const CARDINAL: [(i32, i32); 4] = [
+    (-1, 0),
+    (1, 0),
+    (0, -1),
+    (0, 1)
+];
 
 #[derive(Debug, Clone)]
 pub struct Node {
     elev: u8,
-    neighbours: Vec<Node>
+    neighbors: Vec<Rc<RefCell<Node>>>
 }
 
 impl Node {
     pub fn new(elev: u8) -> Self {
-        Self { elev, neighbours: vec![] }
+        Self { elev, neighbors: vec![] }
     }
 }
 
 pub struct Solution {
-    nodes: Vec<Node>
+    start: Option<Rc<RefCell<Node>>>,
+    target: Option<Rc<RefCell<Node>>>,
+    nodes: Vec<Vec<Rc<RefCell<Node>>>>,
+    width: i32,
+    height: i32
 }
 
 impl Solution {
     pub fn new() -> Self {
         let mut sol = Self {
-            nodes: vec![]
+            start: None,
+            target: None,
+            nodes: vec![],
+            height: 0,
+            width: 0
         };
 
         sol.process_input("day12/input.txt");
@@ -79,30 +96,61 @@ impl Solution {
     //     // Return None if the end node was not reached
     //     None
     // }
+
+    fn add_node(&mut self, node: Node, inner: &mut Vec<Rc<RefCell<Node>>>, sp: char) {
+        let rc = Rc::new(RefCell::new(node));
+        match sp {
+            'S' => self.start = Some(Rc::clone(&rc)),
+            'E' => self.target = Some(Rc::clone(&rc)),
+            _ => {}
+        }
+
+        inner.push(Rc::clone(&rc));
+    }
+
+    fn update_neighbors(&mut self) {
+        // TODO: Fix this
+        for ridx in 0..self.height {
+            for cidx in 0..self.width {
+                let mut node = self.nodes[ridx as usize][cidx as usize].borrow_mut();
+                for (x, y) in CARDINAL {
+                    let dx = cidx + x;
+                    let dy = ridx + y;
+                    if dx < 0 || dx >= self.width || dy < 0 || dy >= self.height { continue; }
+                    let check = &self.nodes[dy as usize][dx as usize];
+                    let check_borrow = check.borrow();
+                    if check_borrow.elev == node.elev + 1 || check_borrow.elev <= node.elev {
+                        node.neighbors.push(Rc::clone(check));
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Solve for Solution {
     fn process_input(&mut self, path: &str) {
         let raw = read_file(path);
-        for (x, line) in raw.split('\n').enumerate() {
-            for (y, ch) in line.chars().enumerate() {
-                let node: Node;
-                if ch == 'S' {
-                    // Start
-                    
-                } else if ch == 'E' {
-                    // End
-
+        for line in raw.split('\n') {
+            let mut inner = vec![];
+            for ch in line.chars() {
+                if ch == 'S' || ch == 'E' {
+                    let node = Node::new(0);
+                    self.add_node(node, &mut inner, ch);
                 } else {
-                    node = Node::new(ch as u8);
-                    self.nodes.push(node);
+                    let node = Node::new(ch as u8);
+                    self.add_node(node, &mut inner, '_');
                 }
             }
+            self.nodes.push(inner);
         }
+        self.height = self.nodes.len() as i32;
+        self.width = self.nodes[0].len() as i32;
+        self.update_neighbors();
     }
 
     fn part1(&mut self) {
-
+        println!("Nodes: {:?}", self.nodes[0]);
     }
 
     fn part2(&mut self) {
